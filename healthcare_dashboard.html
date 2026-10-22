@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Healthcare Analytics - Doctor Visits Portfolio Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;background:#0f1117;color:#e2e8f0;font-size:14px;line-height:1.6}
+
+  .topbar{background:linear-gradient(135deg,#1a1f2e 0%,#0d1b2a 100%);border-bottom:2px solid #2563eb;padding:18px 32px;display:flex;align-items:center;justify-content:space-between}
+  .topbar h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:.3px}
+  .topbar h1 span{color:#60a5fa}
+  .topbar .meta{font-size:12px;color:#94a3b8;text-align:right;line-height:1.8}
+  .badge{display:inline-block;background:#2563eb22;border:1px solid #3b82f6;color:#93c5fd;border-radius:4px;padding:2px 8px;font-size:11px;margin-left:4px}
+
+  .nav{background:#161b27;border-bottom:1px solid #2d3748;display:flex;gap:0;overflow-x:auto;padding:0 32px}
+  .nav button{background:none;border:none;color:#94a3b8;padding:12px 18px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s}
+  .nav button:hover{color:#e2e8f0}
+  .nav button.active{color:#60a5fa;border-bottom-color:#3b82f6}
+
+  .page{display:none;padding:24px 32px;max-width:1400px;margin:0 auto}
+  .page.active{display:block}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:#1e2535;border:1px solid #2d3748;border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
+  .kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+  .kpi.blue::before{background:#3b82f6}.kpi.green::before{background:#10b981}
+  .kpi.purple::before{background:#8b5cf6}.kpi.orange::before{background:#f59e0b}
+  .kpi.red::before{background:#ef4444}.kpi.teal::before{background:#14b8a6}
+  .kpi-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+  .kpi-value{font-size:26px;font-weight:700;color:#f1f5f9;line-height:1.1}
+  .kpi-sub{font-size:11px;color:#94a3b8;margin-top:4px}
+
+  .section-header{margin:24px 0 14px;border-left:3px solid #3b82f6;padding-left:12px}
+  .section-header h2{font-size:16px;font-weight:600;color:#e2e8f0}
+  .section-header p{font-size:12px;color:#64748b;margin-top:2px}
+
+  .chart-grid{display:grid;gap:16px;margin-bottom:20px}
+  .chart-grid.cols-2{grid-template-columns:1fr 1fr}
+  .chart-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+  .chart-grid.cols-1{grid-template-columns:1fr}
+
+  .card{background:#1e2535;border:1px solid #2d3748;border-radius:10px;padding:18px 20px;overflow:hidden}
+  .card-title{font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:4px}
+  .card-subtitle{font-size:11px;color:#64748b;margin-bottom:14px}
+
+  .insight{background:#0f2744;border:1px solid #1e4a7a;border-radius:8px;padding:12px 14px;margin-top:12px;font-size:12px;color:#93c5fd;line-height:1.7}
+  .insight strong{color:#60a5fa}
+  .insight.green{background:#0d2818;border-color:#14532d;color:#86efac}
+  .insight.green strong{color:#4ade80}
+  .insight.orange{background:#2d1810;border-color:#7c2d12;color:#fdba74}
+  .insight.orange strong{color:#fb923c}
+  .insight.purple{background:#1e1035;border-color:#4c1d95;color:#c4b5fd}
+  .insight.purple strong{color:#a78bfa}
+
+  svg{width:100%;display:block}
+
+  .hbar-wrap{padding:4px 0}
+  .hbar-row{display:flex;align-items:center;margin-bottom:9px;gap:8px}
+  .hbar-label{width:80px;font-size:11.5px;color:#94a3b8;text-align:right;flex-shrink:0}
+  .hbar-label.wide{width:110px}
+  .hbar-track{flex:1;background:#2d3748;border-radius:3px;height:20px;position:relative;overflow:hidden}
+  .hbar-fill{height:100%;border-radius:3px;position:absolute;left:0;top:0;display:flex;align-items:center;padding-left:8px;font-size:10.5px;color:#fff;font-weight:600}
+  .hbar-num{font-size:11px;color:#94a3b8;width:44px;text-align:left;flex-shrink:0}
+
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead tr{background:#161b27}
+  th{padding:8px 12px;text-align:left;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #2d3748}
+  td{padding:8px 12px;border-bottom:1px solid #1e2535;color:#cbd5e1}
+  tr:hover td{background:#252d3d}
+  .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600}
+  .tag.numeric{background:#1e3a5f;color:#60a5fa}
+  .tag.categorical{background:#1a2e1a;color:#4ade80}
+  .tag.binary{background:#2d1f3e;color:#c084fc}
+
+  .progress-bar{background:#2d3748;border-radius:4px;height:8px;margin:6px 0}
+  .progress-fill{height:100%;border-radius:4px}
+
+  .callout{border-left:3px solid #f59e0b;background:#1c1a10;padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#fcd34d;margin:12px 0;line-height:1.7}
+
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:20px}
+  .step{background:#1e2535;border:1px solid #2d3748;border-radius:8px;padding:12px 14px}
+  .step-num{font-size:10px;color:#3b82f6;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+  .step-title{font-size:12px;color:#e2e8f0;font-weight:600;margin-top:2px}
+  .step-desc{font-size:10.5px;color:#64748b;margin-top:4px;line-height:1.5}
+
+  .footer{text-align:center;font-size:11px;color:#475569;border-top:1px solid #2d3748;padding:20px 32px;margin-top:32px}
+
+  @media(max-width:780px){
+    .chart-grid.cols-2,.chart-grid.cols-3{grid-template-columns:1fr}
+    .topbar{flex-direction:column;gap:8px;align-items:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>&#x1F3E5; Healthcare Analytics <span>&middot; Doctor Visits</span></h1>
+    <div style="font-size:12px;color:#64748b;margin-top:4px">IBM SkillsBuild &middot; VOIS-Edunet DIY Project &middot; Exploratory Data Analysis Portfolio</div>
+  </div>
+  <div class="meta">
+    Dataset: 5,190 patient records<span class="badge">Australia</span><br/>
+    Variables: 13 features<span class="badge">Cross-sectional</span><br/>
+    Target: Doctor visit count
+  </div>
+</div>
+
+<div class="nav">
+  <button class="active" onclick="showPage('overview',this)">&#x1F4CA; Overview</button>
+  <button onclick="showPage('data',this)">&#x1F5C2; Data Understanding</button>
+  <button onclick="showPage('preprocess',this)">&#x2699;&#xFE0F; Preprocessing</button>
+  <button onclick="showPage('visits',this)">&#x1F4C8; Visit Patterns</button>
+  <button onclick="showPage('health',this)">&#x2764;&#xFE0F; Health Drivers</button>
+  <button onclick="showPage('demographics',this)">&#x1F465; Demographics</button>
+  <button onclick="showPage('insurance',this)">&#x1F6E1; Insurance</button>
+  <button onclick="showPage('summary',this)">&#x1F3AF; Key Findings</button>
+</div>
+
+<!-- ═══ OVERVIEW ═══ -->
+<div id="page-overview" class="page active">
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="kpi-label">Total Patients</div><div class="kpi-value">5,190</div><div class="kpi-sub">Cross-sectional survey</div></div>
+    <div class="kpi green"><div class="kpi-label">Avg Doctor Visits</div><div class="kpi-value">0.30</div><div class="kpi-sub">Per person in dataset</div></div>
+    <div class="kpi orange"><div class="kpi-label">Never Visited</div><div class="kpi-value">79.8%</div><div class="kpi-sub">4,141 patients (0 visits)</div></div>
+    <div class="kpi purple"><div class="kpi-label">Max Visits</div><div class="kpi-value">9</div><div class="kpi-sub">Highest single count</div></div>
+    <div class="kpi teal"><div class="kpi-label">Total Variables</div><div class="kpi-value">13</div><div class="kpi-sub">3 numeric &middot; 10 categorical</div></div>
+    <div class="kpi red"><div class="kpi-label">Has Chronic Cond.</div><div class="kpi-value">40.3%</div><div class="kpi-sub">nchronic = yes</div></div>
+  </div>
+
+  <div class="section-header"><h2>The Data Story</h2><p>Why this dataset matters and what we set out to discover</p></div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
+      <div style="border-right:1px solid #2d3748;padding-right:20px">
+        <div style="font-size:22px;margin-bottom:8px">&#x1F50D;</div>
+        <div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:6px">The Central Question</div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.7">Why do some people visit doctors frequently while others never go? This dataset captures the socioeconomic and health profile of 5,190 Australians to help answer this question systematically.</div>
+      </div>
+      <div style="border-right:1px solid #2d3748;padding-right:20px">
+        <div style="font-size:22px;margin-bottom:8px">&#x1F4CB;</div>
+        <div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:6px">Data Source</div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.7">Based on the Australian Health Survey - a widely cited benchmark in health econometrics. Features span demographics, chronic conditions, health scores, and insurance coverage types.</div>
+      </div>
+      <div>
+        <div style="font-size:22px;margin-bottom:8px">&#x1F3AF;</div>
+        <div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:6px">Analytical Goal</div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.7">Identify the strongest predictors of doctor visit frequency, uncover demographic disparities in healthcare utilisation, and understand the role insurance plays in access to care.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Doctor Visit Frequency Distribution</div>
+      <div class="card-subtitle">Count of 5,190 patients by number of doctor visits (0-9)</div>
+      <svg viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
+        <line x1="50" y1="10" x2="50" y2="170" stroke="#2d3748" stroke-width="1"/>
+        <line x1="50" y1="170" x2="390" y2="170" stroke="#2d3748" stroke-width="1"/>
+        <line x1="50" y1="48" x2="390" y2="48" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="50" y1="90" x2="390" y2="90" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="50" y1="130" x2="390" y2="130" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="44" y="51" text-anchor="end" fill="#64748b" font-size="9">3000</text>
+        <text x="44" y="93" text-anchor="end" fill="#64748b" font-size="9">2000</text>
+        <text x="44" y="133" text-anchor="end" fill="#64748b" font-size="9">1000</text>
+        <text x="44" y="173" text-anchor="end" fill="#64748b" font-size="9">0</text>
+        <!-- scale: max=4141 → 160px; 4141→160,782→30,174→6.7,30→1.2 -->
+        <rect x="57"  y="10"  width="25" height="160" fill="#3b82f6" rx="2"/>
+        <rect x="91"  y="140" width="25" height="30"  fill="#60a5fa" rx="2"/>
+        <rect x="125" y="163" width="25" height="7"   fill="#93c5fd" rx="2"/>
+        <rect x="159" y="169" width="25" height="1.2" fill="#bfdbfe" rx="1"/>
+        <rect x="193" y="169" width="25" height="1"   fill="#bfdbfe" rx="1"/>
+        <rect x="227" y="170" width="25" height="0.4" fill="#bfdbfe" rx="1"/>
+        <rect x="261" y="170" width="25" height="0.5" fill="#bfdbfe" rx="1"/>
+        <rect x="295" y="170" width="25" height="0.5" fill="#bfdbfe" rx="1"/>
+        <rect x="329" y="170" width="25" height="0.2" fill="#bfdbfe" rx="1"/>
+        <rect x="363" y="170" width="18" height="0.04" fill="#bfdbfe" rx="1"/>
+        <text x="69"  y="8"   text-anchor="middle" fill="#93c5fd" font-size="8" font-weight="bold">4,141</text>
+        <text x="103" y="136" text-anchor="middle" fill="#93c5fd" font-size="8" font-weight="bold">782</text>
+        <text x="137" y="159" text-anchor="middle" fill="#93c5fd" font-size="8" font-weight="bold">174</text>
+        <text x="171" y="166" text-anchor="middle" fill="#93c5fd" font-size="7">30</text>
+        <text x="69"  y="183" text-anchor="middle" fill="#64748b" font-size="9">0</text>
+        <text x="103" y="183" text-anchor="middle" fill="#64748b" font-size="9">1</text>
+        <text x="137" y="183" text-anchor="middle" fill="#64748b" font-size="9">2</text>
+        <text x="171" y="183" text-anchor="middle" fill="#64748b" font-size="9">3</text>
+        <text x="205" y="183" text-anchor="middle" fill="#64748b" font-size="9">4</text>
+        <text x="239" y="183" text-anchor="middle" fill="#64748b" font-size="9">5</text>
+        <text x="273" y="183" text-anchor="middle" fill="#64748b" font-size="9">6</text>
+        <text x="307" y="183" text-anchor="middle" fill="#64748b" font-size="9">7</text>
+        <text x="341" y="183" text-anchor="middle" fill="#64748b" font-size="9">8</text>
+        <text x="372" y="183" text-anchor="middle" fill="#64748b" font-size="9">9</text>
+        <text x="220" y="200" text-anchor="middle" fill="#475569" font-size="9">Number of Doctor Visits</text>
+      </svg>
+      <div class="insight"><strong>Heavily Right-Skewed Distribution:</strong> 79.8% of patients have zero visits. This classic count-data distribution means standard linear regression is inappropriate. Poisson or Negative Binomial regression are the correct model choices for this target variable.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Gender Split &amp; Visit Rate Comparison</div>
+      <div class="card-subtitle">Patient gender distribution and average visits per group</div>
+      <svg viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
+        <!-- Donut: 440 circumference, Female 52.1%=229, Male 47.9%=211 -->
+        <circle cx="110" cy="105" r="70" fill="none" stroke="#1e2535" stroke-width="32"/>
+        <circle cx="110" cy="105" r="70" fill="none" stroke="#f472b6" stroke-width="32"
+          stroke-dasharray="229 440" stroke-dashoffset="110"/>
+        <circle cx="110" cy="105" r="70" fill="none" stroke="#3b82f6" stroke-width="32"
+          stroke-dasharray="211 440" stroke-dashoffset="-119"/>
+        <text x="110" y="101" text-anchor="middle" fill="#e2e8f0" font-size="17" font-weight="bold">5,190</text>
+        <text x="110" y="116" text-anchor="middle" fill="#64748b" font-size="10">patients</text>
+        <rect x="46" y="185" width="10" height="10" fill="#f472b6" rx="2"/>
+        <text x="60" y="194" fill="#94a3b8" font-size="10">Female 52.1% (2,702)</text>
+        <rect x="200" y="185" width="10" height="10" fill="#3b82f6" rx="2"/>
+        <text x="214" y="194" fill="#94a3b8" font-size="10">Male 47.9% (2,488)</text>
+        <!-- avg visits bars -->
+        <text x="210" y="35" fill="#64748b" font-size="11" font-weight="600">Avg Visits per Gender</text>
+        <text x="210" y="60" fill="#f472b6" font-size="10">Female</text>
+        <rect x="210" y="65" width="170" height="22" fill="#2d3748" rx="3"/>
+        <rect x="210" y="65" width="107" height="22" fill="#f472b6" rx="3" opacity=".85"/>
+        <text x="326" y="80" fill="#f472b6" font-size="11" font-weight="bold">0.362</text>
+        <text x="210" y="105" fill="#60a5fa" font-size="10">Male</text>
+        <rect x="210" y="110" width="170" height="22" fill="#2d3748" rx="3"/>
+        <rect x="210" y="110" width="70"  height="22" fill="#3b82f6" rx="3" opacity=".85"/>
+        <text x="326" y="125" fill="#60a5fa" font-size="11" font-weight="bold">0.236</text>
+        <text x="210" y="155" fill="#94a3b8" font-size="11">&#x2191; 53% higher visit rate</text>
+        <text x="210" y="170" fill="#94a3b8" font-size="11">in females vs males</text>
+      </svg>
+      <div class="insight"><strong>Female patients visit 53% more often</strong> (0.362 vs 0.236). This aligns with global patterns - women seek medical care more proactively, including preventive, reproductive, and wellness services.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DATA UNDERSTANDING ═══ -->
+<div id="page-data" class="page">
+  <div class="section-header"><h2>Column Dictionary &amp; Data Types</h2><p>Understanding every feature before analysis - the foundation of good EDA</p></div>
+  <div class="card" style="margin-bottom:16px">
+    <table>
+      <thead><tr><th>#</th><th>Column</th><th>Type</th><th>Range / Values</th><th>Description</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>visits</strong></td><td><span class="tag numeric">Numeric</span></td><td>0 - 9</td><td>Number of doctor consultations in the survey period</td><td style="color:#f59e0b">&#x1F3AF; Target</td></tr>
+        <tr><td>2</td><td><strong>gender</strong></td><td><span class="tag categorical">Categorical</span></td><td>male / female</td><td>Biological sex of the respondent</td><td>Feature</td></tr>
+        <tr><td>3</td><td><strong>age</strong></td><td><span class="tag numeric">Numeric</span></td><td>0.19 - 0.72</td><td>Standardized age (multiply ×100 for approximate years: 19-72)</td><td>Feature</td></tr>
+        <tr><td>4</td><td><strong>income</strong></td><td><span class="tag numeric">Numeric</span></td><td>0.0 - 1.5</td><td>Annual income on a normalized scale</td><td>Feature</td></tr>
+        <tr><td>5</td><td><strong>illness</strong></td><td><span class="tag numeric">Numeric</span></td><td>0 - 5</td><td>Number of illnesses experienced in the past 2 weeks</td><td>Feature</td></tr>
+        <tr><td>6</td><td><strong>reduced</strong></td><td><span class="tag numeric">Numeric</span></td><td>0 - 14</td><td>Days of reduced activity due to illness (0-14)</td><td>Feature</td></tr>
+        <tr><td>7</td><td><strong>health</strong></td><td><span class="tag numeric">Numeric</span></td><td>0 - 12</td><td>General health score - higher means worse perceived health</td><td>Feature</td></tr>
+        <tr><td>8</td><td><strong>private</strong></td><td><span class="tag binary">Binary</span></td><td>yes / no</td><td>Holds private health insurance</td><td>Feature</td></tr>
+        <tr><td>9</td><td><strong>freepoor</strong></td><td><span class="tag binary">Binary</span></td><td>yes / no</td><td>Receives government-funded free care (low income)</td><td>Feature</td></tr>
+        <tr><td>10</td><td><strong>freerepat</strong></td><td><span class="tag binary">Binary</span></td><td>yes / no</td><td>Receives government-funded free care (repatriated veteran)</td><td>Feature</td></tr>
+        <tr><td>11</td><td><strong>nchronic</strong></td><td><span class="tag binary">Binary</span></td><td>yes / no</td><td>Has a non-limiting chronic condition</td><td>Feature</td></tr>
+        <tr><td>12</td><td><strong>lchronic</strong></td><td><span class="tag binary">Binary</span></td><td>yes / no</td><td>Has a limiting (functionally severe) chronic condition</td><td>Feature</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Descriptive Statistics - Numeric Features</div>
+      <table style="margin-top:8px">
+        <thead><tr><th>Variable</th><th>Min</th><th>Max</th><th>Mean</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>visits</strong></td><td>0</td><td>9</td><td>0.30</td><td style="color:#64748b">Right-skewed; zero-inflated</td></tr>
+          <tr><td><strong>age</strong></td><td>0.19</td><td>0.72</td><td>0.41</td><td style="color:#64748b">~19-72 years; avg ~41 yrs</td></tr>
+          <tr><td><strong>income</strong></td><td>0.00</td><td>1.50</td><td>0.58</td><td style="color:#64748b">Wide spread; normalized</td></tr>
+          <tr><td><strong>illness</strong></td><td>0</td><td>5</td><td>1.43</td><td style="color:#64748b">Most have 1-2 illnesses</td></tr>
+          <tr><td><strong>reduced</strong></td><td>0</td><td>14</td><td>0.86</td><td style="color:#64748b">Mostly 0; extreme tail</td></tr>
+          <tr><td><strong>health</strong></td><td>0</td><td>12</td><td>1.22</td><td style="color:#64748b">Majority cluster at 0-2</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Categorical Variable Prevalence</div>
+      <div class="hbar-wrap" style="margin-top:10px">
+        <div class="hbar-row"><div class="hbar-label wide">Private Ins.</div><div class="hbar-track"><div class="hbar-fill" style="width:44.3%;background:#3b82f6">Yes 44.3%</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Freepoor</div><div class="hbar-track"><div class="hbar-fill" style="width:4.3%;background:#ef4444">Yes 4.3%</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Freerepat</div><div class="hbar-track"><div class="hbar-fill" style="width:21%;background:#f59e0b">Yes 21%</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide">nchronic</div><div class="hbar-track"><div class="hbar-fill" style="width:40.3%;background:#8b5cf6">Yes 40.3%</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide">lchronic</div><div class="hbar-track"><div class="hbar-fill" style="width:11.7%;background:#ec4899">Yes 11.7%</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Female</div><div class="hbar-track"><div class="hbar-fill" style="width:52.1%;background:#f472b6">52.1%</div></div></div>
+      </div>
+      <div class="insight green"><strong>&#x2705; Zero missing values</strong> across all 5,190 rows and 13 columns - a rare, clean dataset requiring no imputation, making it ideal for learning EDA techniques.</div>
+    </div>
+  </div>
+
+  <div class="section-header"><h2>Feature Groups by Theme</h2><p>Logical clusters of related variables</p></div>
+  <div class="chart-grid cols-3">
+    <div class="card">
+      <div style="color:#3b82f6;font-weight:700;font-size:12px;margin-bottom:10px">&#x1F464; DEMOGRAPHICS</div>
+      <div style="font-size:12px;color:#94a3b8;line-height:2.1">
+        <div>&#x2022; <strong style="color:#cbd5e1">gender</strong> - male / female identity</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">age</strong> - normalized 0.19-0.72</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">income</strong> - economic capacity</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="color:#10b981;font-weight:700;font-size:12px;margin-bottom:10px">&#x1FA7A; HEALTH STATUS</div>
+      <div style="font-size:12px;color:#94a3b8;line-height:2.1">
+        <div>&#x2022; <strong style="color:#cbd5e1">illness</strong> - recent illness count</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">reduced</strong> - sick-day severity</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">health</strong> - perceived health score</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">nchronic</strong> - non-limiting chronic</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">lchronic</strong> - limiting chronic</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="color:#f59e0b;font-weight:700;font-size:12px;margin-bottom:10px">&#x1F6E1; INSURANCE &amp; CARE ACCESS</div>
+      <div style="font-size:12px;color:#94a3b8;line-height:2.1">
+        <div>&#x2022; <strong style="color:#cbd5e1">private</strong> - private coverage</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">freepoor</strong> - govt low-income care</div>
+        <div>&#x2022; <strong style="color:#cbd5e1">freerepat</strong> - govt veteran care</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PREPROCESSING ═══ -->
+<div id="page-preprocess" class="page">
+  <div class="section-header"><h2>Data Preprocessing Pipeline</h2><p>Every transformation applied before analysis, with rationale</p></div>
+  <div class="steps">
+    <div class="step"><div class="step-num">Step 1</div><div class="step-title">Load &amp; Inspect</div><div class="step-desc">Read CSV (5190×13), verify dtypes, print head and info</div></div>
+    <div class="step"><div class="step-num">Step 2</div><div class="step-title">Missing Values</div><div class="step-desc">Zero nulls detected - no imputation needed</div></div>
+    <div class="step"><div class="step-num">Step 3</div><div class="step-title">Drop Index Col</div><div class="step-desc">Unnamed row-ID column provides no signal; removed</div></div>
+    <div class="step"><div class="step-num">Step 4</div><div class="step-title">Encode Binaries</div><div class="step-desc">gender, private, freepoor, freerepat, nchronic, lchronic → 0/1</div></div>
+    <div class="step"><div class="step-num">Step 5</div><div class="step-title">Feature Engineering</div><div class="step-desc">Age brackets, income quartiles, chronic severity composite</div></div>
+    <div class="step"><div class="step-num">Step 6</div><div class="step-title">Outlier Review</div><div class="step-desc">High reduced/health values confirmed as valid; retained</div></div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Missing Value Audit - All Columns</div>
+      <div class="card-subtitle">100% completeness across every feature</div>
+      <div style="margin-top:10px">
+        <div style="font-size:11px;color:#4ade80;margin-bottom:5px">visits &nbsp;&bull;&nbsp; gender &nbsp;&bull;&nbsp; age &nbsp;&bull;&nbsp; income &nbsp;&bull;&nbsp; illness</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:100%;background:#10b981"></div></div>
+        <div style="font-size:11px;color:#4ade80;margin:8px 0 5px">reduced &nbsp;&bull;&nbsp; health &nbsp;&bull;&nbsp; private &nbsp;&bull;&nbsp; freepoor &nbsp;&bull;&nbsp; freerepat</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:100%;background:#10b981"></div></div>
+        <div style="font-size:11px;color:#4ade80;margin:8px 0 5px">nchronic &nbsp;&bull;&nbsp; lchronic</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:100%;background:#10b981"></div></div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px">All 13 columns: 0 nulls / 5,190 records = 100.00% complete</div>
+      </div>
+      <div class="insight green"><strong>&#x2705; Dataset is already clean.</strong> No imputation, no row drops, no forward-fill needed. This is uncommon in real-world data and suggests rigorous survey collection and validation methodology.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Label Encoding Map</div>
+      <div class="card-subtitle">Categorical variables converted to binary integers for ML compatibility</div>
+      <table style="margin-top:8px">
+        <thead><tr><th>Variable</th><th>Original Values</th><th>Encoded</th></tr></thead>
+        <tbody>
+          <tr><td>gender</td><td>female / male</td><td>1 / 0</td></tr>
+          <tr><td>private</td><td>yes / no</td><td>1 / 0</td></tr>
+          <tr><td>freepoor</td><td>yes / no</td><td>1 / 0</td></tr>
+          <tr><td>freerepat</td><td>yes / no</td><td>1 / 0</td></tr>
+          <tr><td>nchronic</td><td>yes / no</td><td>1 / 0</td></tr>
+          <tr><td>lchronic</td><td>yes / no</td><td>1 / 0</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">&#x26A1; Age and income are pre-normalized. No further scaling needed for tree-based models. Apply StandardScaler before using logistic regression or regularized models.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Outlier Decision - Reduced Activity Days</div>
+      <div class="card-subtitle">Zero-inflated with legitimate high-end values</div>
+      <div class="hbar-wrap" style="margin-top:10px">
+        <div class="hbar-row"><div class="hbar-label wide">0 days</div><div class="hbar-track"><div class="hbar-fill" style="width:85.8%;background:#3b82f6">85.8%</div></div><div class="hbar-num">4,454</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">1-3 days</div><div class="hbar-track"><div class="hbar-fill" style="width:6.9%;background:#60a5fa">6.9%</div></div><div class="hbar-num">359</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">4-7 days</div><div class="hbar-track"><div class="hbar-fill" style="width:2.7%;background:#f59e0b">2.7%</div></div><div class="hbar-num">140</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">8-14 days</div><div class="hbar-track"><div class="hbar-fill" style="width:4.6%;background:#ef4444">4.6%</div></div><div class="hbar-num">237</div></div>
+      </div>
+      <div class="insight orange"><strong>Decision: Retain all values.</strong> Patients with 14 reduced days represent genuinely severe illness episodes - removing them would bias predictions for the sickest patients, who are exactly who the model must correctly identify.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Engineered Features Added</div>
+      <div class="card-subtitle">New derived columns for richer grouped analysis</div>
+      <table style="margin-top:8px">
+        <thead><tr><th>New Feature</th><th>Derived From</th><th>Values</th></tr></thead>
+        <tbody>
+          <tr><td>age_group</td><td>age × 100</td><td>18-27, 28-36, 37-45, 46-54, 55-63, 64+</td></tr>
+          <tr><td>income_tier</td><td>income quartiles</td><td>Low, Lower-Mid, Upper-Mid, High</td></tr>
+          <tr><td>chronic_score</td><td>nchronic + lchronic</td><td>0 = none, 1 = mild, 2 = severe</td></tr>
+          <tr><td>any_free_care</td><td>freepoor OR freerepat</td><td>Binary composite</td></tr>
+          <tr><td>sick_burden</td><td>illness + reduced</td><td>Combined illness load index</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VISIT PATTERNS ═══ -->
+<div id="page-visits" class="page">
+  <div class="section-header"><h2>What Drives Doctor Visits?</h2><p>Illness count, sick days, and health scores - the three strongest visit predictors</p></div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Avg Visits by Number of Illnesses (0-5)</div>
+      <div class="card-subtitle">A clear dose-response: more illness = dramatically more visits</div>
+      <div class="hbar-wrap" style="margin-top:12px">
+        <div class="hbar-row"><div class="hbar-label">Illness 0</div><div class="hbar-track"><div class="hbar-fill" style="width:9.7%;background:#1e3a5f">0.079</div></div><div class="hbar-num">n=1,554</div></div>
+        <div class="hbar-row"><div class="hbar-label">Illness 1</div><div class="hbar-track"><div class="hbar-fill" style="width:36.2%;background:#1e4d8c">0.295</div></div><div class="hbar-num">n=1,638</div></div>
+        <div class="hbar-row"><div class="hbar-label">Illness 2</div><div class="hbar-track"><div class="hbar-fill" style="width:49.6%;background:#2563eb">0.404</div></div><div class="hbar-num">n=946</div></div>
+        <div class="hbar-row"><div class="hbar-label">Illness 3</div><div class="hbar-track"><div class="hbar-fill" style="width:51.7%;background:#3b82f6">0.421</div></div><div class="hbar-num">n=542</div></div>
+        <div class="hbar-row"><div class="hbar-label">Illness 4</div><div class="hbar-track"><div class="hbar-fill" style="width:70.9%;background:#60a5fa">0.577</div></div><div class="hbar-num">n=274</div></div>
+        <div class="hbar-row"><div class="hbar-label">Illness 5</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#93c5fd">0.814</div></div><div class="hbar-num">n=236</div></div>
+      </div>
+      <div class="insight"><strong>10× increase in visits:</strong> From 0 illnesses (0.079) to 5 illnesses (0.814). Illness count is the <strong>single strongest individual predictor</strong> of doctor visit frequency in this dataset - a clear dose-response relationship.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Avg Visits by Reduced Activity Days</div>
+      <div class="card-subtitle">Days of activity reduction as a severity amplifier</div>
+      <div class="hbar-wrap" style="margin-top:12px">
+        <div class="hbar-row"><div class="hbar-label wide">0 days</div><div class="hbar-track"><div class="hbar-fill" style="width:11.2%;background:#1e3a5f">0.184</div></div><div class="hbar-num">n=4,454</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">1-3 days</div><div class="hbar-track"><div class="hbar-fill" style="width:35%;background:#2563eb">0.574</div></div><div class="hbar-num">n=359</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">4-7 days</div><div class="hbar-track"><div class="hbar-fill" style="width:66.2%;background:#3b82f6">1.086</div></div><div class="hbar-num">n=140</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">8-14 days</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#f59e0b">1.641</div></div><div class="hbar-num">n=237</div></div>
+      </div>
+      <div class="insight orange"><strong>9× severity multiplier:</strong> Sick-at-home days escalate from 0.18 visits (no reduced days) to <strong>1.64 visits</strong> for those bedridden 8-14 days. This variable captures the real-world severity that illness count alone misses.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-1">
+    <div class="card">
+      <div class="card-title">Health Score vs Average Doctor Visits (Score 0-12; Higher = Worse Health)</div>
+      <div class="card-subtitle">Generally rising trend confirms that self-reported health is a reliable utilisation predictor</div>
+      <svg viewBox="0 0 760 185" xmlns="http://www.w3.org/2000/svg">
+        <line x1="50" y1="10" x2="50" y2="155" stroke="#2d3748" stroke-width="1"/>
+        <line x1="50" y1="155" x2="740" y2="155" stroke="#2d3748" stroke-width="1"/>
+        <line x1="50" y1="48" x2="740" y2="48" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="50" y1="90" x2="740" y2="90" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="50" y1="130" x2="740" y2="130" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="44" y="51"  text-anchor="end" fill="#64748b" font-size="9">1.5</text>
+        <text x="44" y="93"  text-anchor="end" fill="#64748b" font-size="9">1.0</text>
+        <text x="44" y="133" text-anchor="end" fill="#64748b" font-size="9">0.5</text>
+        <!-- y = 155 - (val/1.524)*145; x: health 0-12, spacing ~55px starting at 75 -->
+        <!-- 0→0.199,1→0.335,2→0.381,3→0.418,4→0.535,5→0.53,6→0.625,7→0.918,8→0.476,9→0.656,10→1.524,11→0.833,12→1.0 -->
+        <circle cx="75"  cy="136" r="5" fill="#3b82f6"/>
+        <circle cx="130" cy="123" r="5" fill="#3b82f6"/>
+        <circle cx="185" cy="118" r="5" fill="#3b82f6"/>
+        <circle cx="240" cy="115" r="5" fill="#3b82f6"/>
+        <circle cx="295" cy="104" r="5" fill="#60a5fa"/>
+        <circle cx="350" cy="104" r="5" fill="#60a5fa"/>
+        <circle cx="405" cy="95"  r="5" fill="#f59e0b"/>
+        <circle cx="460" cy="67"  r="5" fill="#f59e0b"/>
+        <circle cx="510" cy="109" r="5" fill="#60a5fa"/>
+        <circle cx="555" cy="92"  r="5" fill="#f59e0b"/>
+        <circle cx="600" cy="10"  r="7" fill="#ef4444"/>
+        <circle cx="645" cy="76"  r="5" fill="#ef4444"/>
+        <circle cx="695" cy="57"  r="5" fill="#ef4444"/>
+        <!-- trend line -->
+        <line x1="75" y1="136" x2="695" y2="57" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" opacity=".45"/>
+        <!-- x labels -->
+        <text x="75"  y="168" text-anchor="middle" fill="#64748b" font-size="9">0</text>
+        <text x="130" y="168" text-anchor="middle" fill="#64748b" font-size="9">1</text>
+        <text x="185" y="168" text-anchor="middle" fill="#64748b" font-size="9">2</text>
+        <text x="240" y="168" text-anchor="middle" fill="#64748b" font-size="9">3</text>
+        <text x="295" y="168" text-anchor="middle" fill="#64748b" font-size="9">4</text>
+        <text x="350" y="168" text-anchor="middle" fill="#64748b" font-size="9">5</text>
+        <text x="405" y="168" text-anchor="middle" fill="#64748b" font-size="9">6</text>
+        <text x="460" y="168" text-anchor="middle" fill="#64748b" font-size="9">7</text>
+        <text x="510" y="168" text-anchor="middle" fill="#64748b" font-size="9">8</text>
+        <text x="555" y="168" text-anchor="middle" fill="#64748b" font-size="9">9</text>
+        <text x="600" y="168" text-anchor="middle" fill="#64748b" font-size="9">10</text>
+        <text x="645" y="168" text-anchor="middle" fill="#64748b" font-size="9">11</text>
+        <text x="695" y="168" text-anchor="middle" fill="#64748b" font-size="9">12</text>
+        <rect x="545" y="0" width="190" height="18" fill="#1e1515" rx="4"/>
+        <text x="640" y="12" text-anchor="middle" fill="#ef4444" font-size="9">&#x26A0; Score 10: 1.524 avg visits</text>
+      </svg>
+      <div class="insight purple"><strong>7.5× range:</strong> Patients at health score 0 average only 0.199 visits; at score 10 they average 1.524. The general upward trend makes perceived health a <strong>reliable proxy for healthcare demand</strong> - valuable for early-warning triage systems.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HEALTH DRIVERS ═══ -->
+<div id="page-health" class="page">
+  <div class="section-header"><h2>Chronic Conditions &amp; Disease Burden</h2><p>How long-term illness shapes lifelong healthcare utilisation patterns</p></div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Chronic Condition Prevalence</div>
+      <div class="card-subtitle">40% have a non-limiting condition; 12% have a limiting (severe) one</div>
+      <svg viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg">
+        <text x="100" y="22" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">nchronic (Non-Limiting)</text>
+        <!-- circumference = 2π×65 ≈ 408; 40.3% = 164; 59.7% = 244 -->
+        <circle cx="100" cy="115" r="65" fill="none" stroke="#2d3748" stroke-width="28"/>
+        <circle cx="100" cy="115" r="65" fill="none" stroke="#8b5cf6" stroke-width="28"
+          stroke-dasharray="164 408" stroke-dashoffset="102"/>
+        <text x="100" y="110" text-anchor="middle" fill="#e2e8f0" font-size="18" font-weight="bold">40.3%</text>
+        <text x="100" y="125" text-anchor="middle" fill="#94a3b8" font-size="10">have nchronic</text>
+
+        <text x="270" y="22" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">lchronic (Limiting)</text>
+        <!-- 11.7% = 48; 88.3% = 360 -->
+        <circle cx="270" cy="115" r="65" fill="none" stroke="#2d3748" stroke-width="28"/>
+        <circle cx="270" cy="115" r="65" fill="none" stroke="#ec4899" stroke-width="28"
+          stroke-dasharray="48 408" stroke-dashoffset="102"/>
+        <text x="270" y="110" text-anchor="middle" fill="#e2e8f0" font-size="18" font-weight="bold">11.7%</text>
+        <text x="270" y="125" text-anchor="middle" fill="#94a3b8" font-size="10">have lchronic</text>
+
+        <rect x="30"  y="192" width="10" height="10" fill="#8b5cf6" rx="2"/>
+        <text x="44"  y="201" fill="#94a3b8" font-size="10">nchronic - non-limiting (2,092)</text>
+        <rect x="200" y="192" width="10" height="10" fill="#ec4899" rx="2"/>
+        <text x="214" y="201" fill="#94a3b8" font-size="10">lchronic - limiting (605)</text>
+      </svg>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Avg Visits by Chronic Condition Type</div>
+      <div class="card-subtitle">Limiting conditions have 2× the impact of non-limiting ones</div>
+      <div style="margin-top:16px">
+        <div style="font-size:12px;color:#8b5cf6;font-weight:600;margin-bottom:8px">Non-Limiting Chronic (nchronic)</div>
+        <div class="hbar-row"><div class="hbar-label wide">No nchronic</div><div class="hbar-track"><div class="hbar-fill" style="width:78.6%;background:#2d3748">0.272</div></div><div class="hbar-num">n=3,098</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Has nchronic</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#8b5cf6">0.346</div></div><div class="hbar-num">n=2,092</div></div>
+        <div style="font-size:12px;color:#ec4899;font-weight:600;margin:14px 0 8px">Limiting Chronic (lchronic)</div>
+        <div class="hbar-row"><div class="hbar-label wide">No lchronic</div><div class="hbar-track"><div class="hbar-fill" style="width:43.5%;background:#2d3748">0.262</div></div><div class="hbar-num">n=4,585</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Has lchronic</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#ec4899">0.603</div></div><div class="hbar-num">n=605</div></div>
+      </div>
+      <div class="insight purple"><strong>Limiting chronic conditions double visits (130% increase).</strong> Non-limiting adds only a modest 27%. It is not just having a chronic condition that matters - it is whether that condition impairs daily functioning that truly drives healthcare-seeking behaviour.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-1">
+    <div class="card">
+      <div class="card-title">Illness Count Distribution Across All 5,190 Patients</div>
+      <div class="card-subtitle">How many acute illnesses did patients experience in the past 2 weeks?</div>
+      <svg viewBox="0 0 760 165" xmlns="http://www.w3.org/2000/svg">
+        <line x1="50" y1="10" x2="50" y2="130" stroke="#2d3748"/>
+        <line x1="50" y1="130" x2="740" y2="130" stroke="#2d3748"/>
+        <line x1="50" y1="50" x2="740" y2="50" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="50" y1="90" x2="740" y2="90" stroke="#1e2535" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="44" y="53" text-anchor="end" fill="#64748b" font-size="9">1,000</text>
+        <text x="44" y="93" text-anchor="end" fill="#64748b" font-size="9">500</text>
+        <!-- scale: max=1638, range=120px. 0=1554,1=1638,2=946,3=542,4=274,5=236 -->
+        <rect x="80"  y="16" width="85" height="114" fill="#3b82f6" rx="3" opacity=".85"/>
+        <rect x="200" y="10" width="85" height="120" fill="#2563eb" rx="3"/>
+        <rect x="320" y="57" width="85" height="73"  fill="#60a5fa" rx="3" opacity=".85"/>
+        <rect x="440" y="90" width="85" height="40"  fill="#93c5fd" rx="3"/>
+        <rect x="560" y="110" width="85" height="20" fill="#bfdbfe" rx="3" opacity=".8"/>
+        <rect x="655" y="113" width="75" height="17" fill="#bfdbfe" rx="3" opacity=".65"/>
+        <text x="122" y="13"  text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">1,554</text>
+        <text x="242" y="7"   text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">1,638</text>
+        <text x="362" y="54"  text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">946</text>
+        <text x="482" y="87"  text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">542</text>
+        <text x="602" y="107" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">274</text>
+        <text x="692" y="110" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">236</text>
+        <text x="122" y="148" text-anchor="middle" fill="#64748b" font-size="10">0 Illnesses</text>
+        <text x="242" y="148" text-anchor="middle" fill="#64748b" font-size="10">1 Illness</text>
+        <text x="362" y="148" text-anchor="middle" fill="#64748b" font-size="10">2 Illnesses</text>
+        <text x="482" y="148" text-anchor="middle" fill="#64748b" font-size="10">3 Illnesses</text>
+        <text x="602" y="148" text-anchor="middle" fill="#64748b" font-size="10">4 Illnesses</text>
+        <text x="692" y="148" text-anchor="middle" fill="#64748b" font-size="10">5 Illnesses</text>
+      </svg>
+      <div class="insight"><strong>Moderate illness is the norm:</strong> 31.6% had 1 illness, 18.2% had 2, and 30% had none. Only 9.8% reported 4-5 illnesses. The distribution suggests the majority need <em>routine, not emergency</em>, access to primary care.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DEMOGRAPHICS ═══ -->
+<div id="page-demographics" class="page">
+  <div class="section-header"><h2>Age &amp; Income Analysis</h2><p>Socioeconomic factors as structural determinants of healthcare utilisation</p></div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Average Visits by Age Group</div>
+      <div class="card-subtitle">Older patients use healthcare significantly more</div>
+      <div class="hbar-wrap" style="margin-top:12px">
+        <div class="hbar-row"><div class="hbar-label wide">18-27 yrs</div><div class="hbar-track"><div class="hbar-fill" style="width:44.9%;background:#1e3a5f">0.217</div></div><div class="hbar-num">n=2,488</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">28-36 yrs</div><div class="hbar-track"><div class="hbar-fill" style="width:50.5%;background:#1e4a7a">0.244</div></div><div class="hbar-num">n=447</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">37-45 yrs</div><div class="hbar-track"><div class="hbar-fill" style="width:60%;background:#2563eb">0.290</div></div><div class="hbar-num">n=307</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">46-54 yrs</div><div class="hbar-track"><div class="hbar-fill" style="width:84%;background:#3b82f6">0.406</div></div><div class="hbar-num">n=495</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">55-63 yrs</div><div class="hbar-track"><div class="hbar-fill" style="width:75.7%;background:#60a5fa">0.366</div></div><div class="hbar-num">n=631</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">64+ yrs</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#93c5fd">0.483</div></div><div class="hbar-num">n=822</div></div>
+      </div>
+      <div class="insight"><strong>Age and visits rise together - with a twist.</strong> Visits climb from 0.217 (18-27) to 0.483 (64+). The slight dip at 55-63 may reflect the "healthy worker" effect - healthier individuals remain employed longer. Post-retirement health monitoring then accelerates.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Average Visits by Income Tier</div>
+      <div class="card-subtitle">Clear inverse relationship - lower income = more doctor visits</div>
+      <svg viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg">
+        <line x1="40" y1="20" x2="40" y2="165" stroke="#2d3748" stroke-width="1"/>
+        <line x1="40" y1="165" x2="370" y2="165" stroke="#2d3748" stroke-width="1"/>
+        <!-- max=0.398, y_range=135; Low=0.398→y=30,L-M=0.305→y=63,U-M=0.23→y=86,H=0.225→y=88 -->
+        <rect x="55"  y="30"  width="60" height="135" fill="#ef4444" rx="4" opacity=".85"/>
+        <rect x="140" y="63"  width="60" height="102" fill="#f97316" rx="4" opacity=".85"/>
+        <rect x="225" y="87"  width="60" height="78"  fill="#eab308" rx="4" opacity=".85"/>
+        <rect x="310" y="89"  width="55" height="76"  fill="#22c55e" rx="4" opacity=".85"/>
+        <text x="85"  y="26"  text-anchor="middle" fill="#fca5a5" font-size="12" font-weight="bold">0.398</text>
+        <text x="170" y="59"  text-anchor="middle" fill="#fdba74" font-size="12" font-weight="bold">0.305</text>
+        <text x="255" y="83"  text-anchor="middle" fill="#fde047" font-size="12" font-weight="bold">0.230</text>
+        <text x="337" y="85"  text-anchor="middle" fill="#86efac" font-size="12" font-weight="bold">0.225</text>
+        <text x="85"  y="180" text-anchor="middle" fill="#64748b" font-size="10">Low</text>
+        <text x="170" y="180" text-anchor="middle" fill="#64748b" font-size="10">Lower-Mid</text>
+        <text x="255" y="180" text-anchor="middle" fill="#64748b" font-size="10">Upper-Mid</text>
+        <text x="337" y="180" text-anchor="middle" fill="#64748b" font-size="10">High</text>
+        <text x="205" y="200" text-anchor="middle" fill="#475569" font-size="9">Income Tier (Quartile-Based)</text>
+      </svg>
+      <div class="insight orange"><strong>Income inequality in healthcare:</strong> Low-income patients visit doctors <strong>77% more often</strong> than high-income (0.398 vs 0.225). This reflects a double burden - higher disease exposure from poor living conditions AND greater reliance on public healthcare systems.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-1">
+    <div class="card">
+      <div class="card-title">Population Age Distribution - 5,190 Patients</div>
+      <div class="card-subtitle">47.9% of all patients fall in the youngest bracket (18-27), shaping dataset interpretation</div>
+      <svg viewBox="0 0 760 125" xmlns="http://www.w3.org/2000/svg">
+        <line x1="50" y1="10" x2="50" y2="90" stroke="#2d3748"/>
+        <line x1="50" y1="90" x2="740" y2="90" stroke="#2d3748"/>
+        <!-- max=2488; bars at equal x-intervals: 2488,447,307,495,631,822 -->
+        <rect x="60"  y="10" width="320" height="35" fill="#3b82f6" rx="3"/>
+        <rect x="60"  y="52" width="57"  height="32" fill="#60a5fa" rx="3"/>
+        <rect x="145" y="52" width="39"  height="32" fill="#60a5fa" rx="3"/>
+        <rect x="215" y="52" width="64"  height="32" fill="#60a5fa" rx="3"/>
+        <rect x="310" y="52" width="81"  height="32" fill="#60a5fa" rx="3"/>
+        <rect x="425" y="52" width="105" height="32" fill="#60a5fa" rx="3"/>
+        <text x="220" y="31" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="bold">18-27 years: 2,488 patients (47.9%)</text>
+        <text x="88"  y="71" text-anchor="middle" fill="#bfdbfe" font-size="9">447</text>
+        <text x="165" y="71" text-anchor="middle" fill="#bfdbfe" font-size="9">307</text>
+        <text x="247" y="71" text-anchor="middle" fill="#bfdbfe" font-size="9">495</text>
+        <text x="350" y="71" text-anchor="middle" fill="#bfdbfe" font-size="9">631</text>
+        <text x="477" y="71" text-anchor="middle" fill="#bfdbfe" font-size="9">822</text>
+        <text x="88"  y="110" text-anchor="middle" fill="#64748b" font-size="9">28-36</text>
+        <text x="165" y="110" text-anchor="middle" fill="#64748b" font-size="9">37-45</text>
+        <text x="247" y="110" text-anchor="middle" fill="#64748b" font-size="9">46-54</text>
+        <text x="350" y="110" text-anchor="middle" fill="#64748b" font-size="9">55-63</text>
+        <text x="477" y="110" text-anchor="middle" fill="#64748b" font-size="9">64+ yrs</text>
+      </svg>
+      <div class="callout">&#x1F4CC; The dataset is skewed toward young adults. Insights about elderly healthcare are based on smaller samples (n=822 for 64+). Stratified sampling would improve confidence in age-specific conclusions.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INSURANCE ═══ -->
+<div id="page-insurance" class="page">
+  <div class="section-header"><h2>Insurance &amp; Healthcare Access</h2><p>How coverage type shapes - and sometimes counterintuitively reduces - doctor visit rates</p></div>
+
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="kpi-label">Private Insurance</div><div class="kpi-value">44.3%</div><div class="kpi-sub">2,298 patients</div></div>
+    <div class="kpi orange"><div class="kpi-label">Govt Freepoor</div><div class="kpi-value">4.3%</div><div class="kpi-sub">222 low-income patients</div></div>
+    <div class="kpi green"><div class="kpi-label">Govt Freerepat</div><div class="kpi-value">21.0%</div><div class="kpi-sub">1,091 veterans</div></div>
+    <div class="kpi purple"><div class="kpi-label">No Specific Cover</div><div class="kpi-value">~30%</div><div class="kpi-sub">Medicare only</div></div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title">Average Visits by Insurance Type</div>
+      <div class="card-subtitle">Three insurance groups - three very different utilisation stories</div>
+      <div class="hbar-wrap" style="margin-top:16px">
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">Private Insurance</div>
+        <div class="hbar-row"><div class="hbar-label wide">Private (Yes)</div><div class="hbar-track"><div class="hbar-fill" style="width:96%;background:#3b82f6">0.295</div></div><div class="hbar-num">n=2,298</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Private (No)</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#1e3a5f">0.307</div></div><div class="hbar-num">n=2,892</div></div>
+        <div style="font-size:11px;color:#64748b;margin:10px 0 6px">Government Free (Low Income)</div>
+        <div class="hbar-row"><div class="hbar-label wide">Freepoor (Yes)</div><div class="hbar-track"><div class="hbar-fill" style="width:51.5%;background:#ef4444">0.158</div></div><div class="hbar-num">n=222</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Freepoor (No)</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#2d3748">0.308</div></div><div class="hbar-num">n=4,968</div></div>
+        <div style="font-size:11px;color:#64748b;margin:10px 0 6px">Government Free (Veterans)</div>
+        <div class="hbar-row"><div class="hbar-label wide">Freerepat (Yes)</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:#10b981">0.467</div></div><div class="hbar-num">n=1,091</div></div>
+        <div class="hbar-row"><div class="hbar-label wide">Freerepat (No)</div><div class="hbar-track"><div class="hbar-fill" style="width:55%;background:#1e3a4f">0.258</div></div><div class="hbar-num">n=4,099</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Insurance Paradoxes - Three Counterintuitive Findings</div>
+      <div style="margin-top:12px">
+        <div class="insight" style="margin-bottom:10px"><strong>&#x1F537; Private Insurance Paradox:</strong> Private holders (0.295) visit <em>slightly less</em> than uninsured (0.307). This is the "healthy subscriber" effect - wealthier, healthier individuals can afford private cover and also need less care. Cost is not the primary barrier for this group.</div>
+        <div class="insight orange" style="margin-bottom:10px"><strong>&#x1F534; Freepoor Underutilisation (0.158):</strong> Despite free coverage, low-income patients visit the <em>least</em>. This signals non-financial barriers: transport access, work schedule constraints, healthcare literacy gaps, or social stigma around seeking care.</div>
+        <div class="insight green"><strong>&#x1F7E2; Freerepat High Utilisation (0.467):</strong> Veterans with free government care visit <strong>81% more often than average</strong>. Veterans carry higher chronic condition burdens from military service - and free care removes all financial barriers, enabling full utilisation.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-1">
+    <div class="card">
+      <div class="card-title">Insurance Coverage Composition - 5,190 Patients</div>
+      <div class="card-subtitle">Stacked view of all insurance types across the population</div>
+      <svg viewBox="0 0 760 105" xmlns="http://www.w3.org/2000/svg">
+        <rect x="40" y="20" width="680" height="44" fill="#2d3748" rx="5"/>
+        <!-- Private 44.3% = 301px -->
+        <rect x="40" y="20" width="301" height="44" fill="#3b82f6" rx="5 0 0 5"/>
+        <!-- Freerepat 21% = 143px -->
+        <rect x="341" y="20" width="143" height="44" fill="#10b981"/>
+        <!-- Freepoor 4.3% = 29px -->
+        <rect x="484" y="20" width="29"  height="44" fill="#ef4444"/>
+        <!-- No coverage ~30.4% → 207px -->
+        <rect x="513" y="20" width="207" height="44" fill="#475569" rx="0 5 5 0"/>
+        <text x="190" y="46" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Private 44.3%</text>
+        <text x="413" y="46" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">Freerepat 21%</text>
+        <text x="498" y="40" text-anchor="middle" fill="#fca5a5" font-size="8">4.3%</text>
+        <text x="617" y="46" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="700">No Specific Cover ~30%</text>
+        <rect x="40"  y="76" width="10" height="10" fill="#3b82f6" rx="2"/>
+        <text x="54"  y="85" fill="#94a3b8" font-size="9">Private Insurance</text>
+        <rect x="160" y="76" width="10" height="10" fill="#10b981" rx="2"/>
+        <text x="174" y="85" fill="#94a3b8" font-size="9">Freerepat (Veterans)</text>
+        <rect x="320" y="76" width="10" height="10" fill="#ef4444" rx="2"/>
+        <text x="334" y="85" fill="#94a3b8" font-size="9">Freepoor (Low Income)</text>
+        <rect x="490" y="76" width="10" height="10" fill="#475569" rx="2"/>
+        <text x="504" y="85" fill="#94a3b8" font-size="9">No Specific Coverage (Medicare only)</text>
+      </svg>
+      <div class="callout">&#x1F4CC; The freepoor group (4.3%, n=222) has the lowest visit rate despite being medically vulnerable. Targeted outreach programs and healthcare navigator services are strongly warranted for this cohort.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SUMMARY ═══ -->
+<div id="page-summary" class="page">
+  <div class="section-header"><h2>Key Findings, Predictor Ranking &amp; Recommendations</h2><p>The complete data story on one page</p></div>
+
+  <div class="chart-grid cols-1" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title">Predictor Strength Ranking (by avg visit impact)</div>
+      <div class="card-subtitle">Variables ranked by how much they shift the average doctor visit count above baseline</div>
+      <div class="hbar-wrap" style="margin-top:14px">
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">reduced 8-14 days</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:linear-gradient(90deg,#ef4444,#f97316)">&#x25B2; 1.641 avg visits</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">health score 10</div><div class="hbar-track"><div class="hbar-fill" style="width:93%;background:linear-gradient(90deg,#f97316,#eab308)">&#x25B2; 1.524 avg visits</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">illness = 5</div><div class="hbar-track"><div class="hbar-fill" style="width:50%;background:#2563eb">&#x25B2; 0.814 avg visits</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">freerepat = yes</div><div class="hbar-track"><div class="hbar-fill" style="width:28.5%;background:#10b981">0.467</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">lchronic = yes</div><div class="hbar-track"><div class="hbar-fill" style="width:36.8%;background:#8b5cf6">0.603</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">age 64+</div><div class="hbar-track"><div class="hbar-fill" style="width:29.5%;background:#60a5fa">0.483</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">income: Low</div><div class="hbar-track"><div class="hbar-fill" style="width:24.3%;background:#f59e0b">0.398</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">gender: female</div><div class="hbar-track"><div class="hbar-fill" style="width:22%;background:#f472b6">0.362</div></div></div>
+        <div class="hbar-row"><div class="hbar-label wide" style="color:#e2e8f0;text-align:left">nchronic = yes</div><div class="hbar-track"><div class="hbar-fill" style="width:21%;background:#a78bfa">0.346</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <div class="card-title" style="color:#4ade80">&#x2705; Key Findings (10 Insights)</div>
+      <div style="margin-top:10px;font-size:12px;color:#94a3b8;line-height:2.2">
+        <div>1. <strong style="color:#cbd5e1">79.8%</strong> of patients never visited a doctor → heavy zero-inflation in target</div>
+        <div>2. <strong style="color:#cbd5e1">Illness count</strong> is the single strongest predictor of visit frequency</div>
+        <div>3. <strong style="color:#cbd5e1">Reduced activity days</strong> amplify illness impact → 9× more visits at 8-14 days</div>
+        <div>4. <strong style="color:#cbd5e1">Females</strong> visit 53% more often than males</div>
+        <div>5. <strong style="color:#cbd5e1">Seniors (64+)</strong> have the highest visit rate among all age groups</div>
+        <div>6. <strong style="color:#cbd5e1">Low-income</strong> patients use healthcare 77% more than high-income patients</div>
+        <div>7. <strong style="color:#cbd5e1">Veterans (freerepat)</strong> have the highest visit rate of any insurance group</div>
+        <div>8. <strong style="color:#cbd5e1">Freepoor</strong> (most vulnerable group) visits the least - access barrier</div>
+        <div>9. <strong style="color:#cbd5e1">Limiting chronic</strong> conditions have 2× the impact of non-limiting ones</div>
+        <div>10. <strong style="color:#cbd5e1">Private insurance</strong> holders visit slightly less - the healthy subscriber effect</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:#60a5fa">&#x1F3AF; Recommendations (7 Actions)</div>
+      <div style="margin-top:10px;font-size:12px;color:#94a3b8;line-height:2.2">
+        <div>1. <strong style="color:#cbd5e1">Freepoor outreach</strong> - free coverage is underutilised; deploy care navigators</div>
+        <div>2. <strong style="color:#cbd5e1">Senior capacity planning</strong> - demand grows predictably with age</div>
+        <div>3. <strong style="color:#cbd5e1">Composite illness score</strong> (illness + reduced) for clinical triage prioritisation</div>
+        <div>4. <strong style="color:#cbd5e1">Gender-aware programs</strong> - improve male engagement; female load is high</div>
+        <div>5. <strong style="color:#cbd5e1">Income-linked access policy</strong> - low earners face double health burden</div>
+        <div>6. <strong style="color:#cbd5e1">Poisson/NB regression model</strong> - OLS is unsuitable for count data; use proper count models</div>
+        <div>7. <strong style="color:#cbd5e1">Chronic condition monitoring</strong> - lchronic patients are high-utilizers; prioritize follow-up care</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;border-color:#3b82f6">
+    <div style="font-size:14px;font-weight:700;color:#60a5fa;margin-bottom:12px">&#x1F4D6; The Complete Data Story</div>
+    <div style="font-size:13px;color:#94a3b8;line-height:1.9">
+      Across <strong style="color:#e2e8f0">5,190 Australians</strong>, healthcare utilisation is not random - it follows clear, predictable patterns rooted in three pillars:
+      <strong style="color:#e2e8f0">illness burden, demographic profile, and healthcare access structure.</strong>
+      <br/><br/>
+      The data opens with a striking fact: <strong style="color:#e2e8f0">nearly 80% of people never saw a doctor</strong> in the survey period. This zero-inflation is the defining statistical feature and means any predictive model must account for the two-stage decision process - first, whether to visit at all, then how many times.
+      <br/><br/>
+      When illness does strike, the frequency escalates sharply. <strong style="color:#e2e8f0">Illness count is the #1 predictor</strong>, and reduced activity days multiply that signal into a reliable severity index. Chronic conditions compound the picture: a <em>limiting</em> chronic condition alone doubles expected visits, while non-limiting conditions add only a modest 27% increase - confirming that functional impairment is what truly drives healthcare-seeking behaviour.
+      <br/><br/>
+      Demographics tell their own story. <strong style="color:#e2e8f0">Women seek care proactively, seniors accumulate health needs over time, and lower-income patients face a double burden</strong> - greater disease exposure and greater dependence on public systems. The most striking paradox is the <strong style="color:#e2e8f0">freepoor underutilisation</strong>: the group with the greatest healthcare need uses it the least, a clear signal that financial barriers are not the only obstacle - structural and social barriers also prevent vulnerable populations from accessing the care that is already available to them.
+      <br/><br/>
+      For analysts and policymakers, the prescription is clear: <strong style="color:#e2e8f0">model visit counts with Poisson or Negative Binomial regression, invest in outreach for low-income groups, expand chronic disease management, and plan senior healthcare capacity proactively.</strong> The data has spoken - the next step is action.
+    </div>
+  </div>
+</div>
+
+<div class="footer">Made with IBM Bob &nbsp;&middot;&nbsp; Healthcare Analytics for Doctor Visits &nbsp;&middot;&nbsp; IBM SkillsBuild &middot; VOIS-Edunet DIY Project</div>
+
+<script>
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav button').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
